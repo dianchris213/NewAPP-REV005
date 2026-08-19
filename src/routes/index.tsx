@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { memo, useCallback, useMemo, useState } from "react";
-import { AllTransactionsSheet } from "@/components/AllTransactionsSheet";
 import { AppShell, TopBar } from "@/components/AppShell";
 import { FullScreenModal } from "@/components/FullScreenModal";
 import { EmptyState } from "@/components/EmptyState";
@@ -88,15 +87,13 @@ function daysUntil(dueDay: number) {
 }
 
 function Home() {
-  const { user, transactions, balance, totalIncome, totalExpense } = useApp();
-  const [allOpen, setAllOpen] = useState(false);
+  const { user, transactions, balance, totalIncome, totalExpense, setAllTxOpen } = useApp();
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [activePocket, setActivePocket] = useState<string | null>(null);
   const pocketStrip = useDragScroll<HTMLDivElement>();
   const visible = useMemo(() => transactions.slice(0, RECENT_LIMIT), [transactions]);
   const hidden = Math.max(transactions.length - RECENT_LIMIT, 0);
-  const openAll = useCallback(() => setAllOpen(true), []);
-  const closeAll = useCallback(() => setAllOpen(false), []);
+  
   const openPocket = useCallback((name: string) => setActivePocket(name), []);
   const pocketItems = useMemo(
     () =>
@@ -105,6 +102,7 @@ function Home() {
         : [],
     [transactions, activePocket],
   );
+  
   const copyBalance = useCallback(async () => {
     const text = `Rp.${Math.abs(Math.round(balance)).toLocaleString("id-ID")}`;
     try {
@@ -228,7 +226,7 @@ function Home() {
           hidden > 0 ? (
             <button
               type="button"
-              onClick={openAll}
+              onClick={() => setAllTxOpen(true)}
               aria-haspopup="dialog"
               className="flex items-center gap-1 rounded-full border border-outline-variant/30 px-3 py-1 text-meta text-on-surface-variant/80"
             >
@@ -254,8 +252,6 @@ function Home() {
           )}
         </div>
       </Section>
-
-      <AllTransactionsSheet open={allOpen} onClose={closeAll} items={transactions} />
 
       <FullScreenModal
         open={balanceOpen}
