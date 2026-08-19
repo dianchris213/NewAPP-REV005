@@ -28,6 +28,7 @@ export type User = {
 
 export type TxFilters = {
   month: string;
+  week: string; // "all" | "this" | "last"
   type: "all" | "income" | "expense";
   category: string;
   keyword: string;
@@ -35,6 +36,7 @@ export type TxFilters = {
 
 export const defaultTxFilters: TxFilters = {
   month: "all",
+  week: "all",
   type: "all",
   category: "all",
   keyword: "",
@@ -95,8 +97,12 @@ type AppState = {
   transactions: Transaction[];
   settings: Settings;
   addTxOpen: boolean;
+  allTxOpen: boolean;
   txFilters: TxFilters;
   setTxFilters: (update: Partial<TxFilters>) => void;
+  resetTxFilters: () => void;
+  setAllTxOpen: (open: boolean) => void;
+  openCurrentMonth: () => void;
   login: (provider: "telegram" | "google", name?: string) => Promise<void>;
   logout: () => void;
   addTransaction: (input: Omit<Transaction, "id" | "date" | "pending">) => void;
@@ -116,10 +122,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [addTxOpen, setAddTxOpen] = useState(false);
+  const [allTxOpen, setAllTxOpen] = useState(false);
   const [txFilters, setTxFiltersState] = useState<TxFilters>(defaultTxFilters);
 
   const setTxFilters = useCallback((update: Partial<TxFilters>) => {
     setTxFiltersState((prev) => ({ ...prev, ...update }));
+  }, []);
+
+  const resetTxFilters = useCallback(() => setTxFiltersState(defaultTxFilters), []);
+
+  const openCurrentMonth = useCallback(() => {
+    setTxFiltersState({
+      ...defaultTxFilters,
+      month: String(new Date().getMonth()),
+    });
+    setAllTxOpen(true);
   }, []);
 
   useEffect(() => {
@@ -238,8 +255,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       transactions,
       settings,
       addTxOpen,
+      allTxOpen,
       txFilters,
       setTxFilters,
+      resetTxFilters,
+      setAllTxOpen,
+      openCurrentMonth,
       login,
       logout,
       addTransaction,
@@ -256,8 +277,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       transactions,
       settings,
       addTxOpen,
+      allTxOpen,
       txFilters,
       setTxFilters,
+      resetTxFilters,
+      openCurrentMonth,
       login,
       logout,
       addTransaction,

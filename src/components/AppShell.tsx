@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { AddTransactionSheet } from "./AddTransactionSheet";
+import { AllTransactionsSheet } from "./AllTransactionsSheet";
 import { useApp } from "@/lib/app-store";
 
 const tabs = [
@@ -64,7 +65,15 @@ export function AppShell({
   topBar?: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { hydrated, user, setAddTxOpen } = useApp();
+  const {
+    hydrated,
+    user,
+    setAddTxOpen,
+    transactions,
+    allTxOpen,
+    setAllTxOpen,
+    openCurrentMonth,
+  } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -100,12 +109,29 @@ export function AppShell({
             <Icon name="add" className="text-[28px]" fill={1} />
           </div>
         </button>
+        <button
+          type="button"
+          onClick={openCurrentMonth}
+          aria-label="Transaksi bulan ini"
+          aria-haspopup="dialog"
+          className="flex w-14 flex-col items-center justify-center gap-1 text-on-surface-variant/70 transition-all active:scale-90"
+        >
+          <span className="flex h-7 w-12 items-center justify-center rounded-full">
+            <Icon name="calendar_month" className="text-[22px]" />
+          </span>
+          <span className="text-[10px] font-semibold tracking-wide">Bulan</span>
+        </button>
         {tabs.slice(2).map((t) => (
           <NavItem key={t.to} {...t} active={pathname === t.to} />
         ))}
       </nav>
 
       <AddTransactionSheet />
+      <AllTransactionsSheet
+        open={allTxOpen}
+        onClose={() => setAllTxOpen(false)}
+        items={transactions}
+      />
     </div>
   );
 }
