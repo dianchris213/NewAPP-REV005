@@ -88,7 +88,7 @@ function daysUntil(dueDay: number) {
 }
 
 function Home() {
-  const { user, transactions, balance, totalIncome, totalExpense, setAddTxOpen } = useApp();
+  const { user, transactions, balance, totalIncome, totalExpense } = useApp();
   const [allOpen, setAllOpen] = useState(false);
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [activePocket, setActivePocket] = useState<string | null>(null);
