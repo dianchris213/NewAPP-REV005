@@ -37,6 +37,8 @@ export function AllTransactionsSheet({
   // Filters live in the app store so selections persist across open/close.
   const { txFilters, setTxFilters } = useApp();
   const { month, type, category, keyword } = txFilters;
+  const hasActiveFilters =
+    month !== "all" || type !== "all" || category !== "all" || keyword.trim() !== "";
 
   useEffect(() => {
     if (!open) return;
@@ -82,14 +84,28 @@ export function AllTransactionsSheet({
           <h2 className="text-title text-on-surface">Semua Transaksi</h2>
           <span className="text-meta text-on-surface-variant/80">{filtered.length} entri</span>
         </div>
-        <button
-          type="button"
-          aria-label="Tutup"
-          onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-variant text-on-surface-variant transition-transform active:scale-95"
-        >
-          <Icon name="close" className="text-[20px]" />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Reset filter"
+            disabled={!hasActiveFilters}
+            onClick={() =>
+              setTxFilters({ month: "all", type: "all", category: "all", keyword: "" })
+            }
+            className="flex h-10 items-center gap-1 rounded-full bg-surface-variant px-3 text-[12px] font-semibold text-on-surface-variant transition-transform active:scale-95 disabled:opacity-40"
+          >
+            <Icon name="restart_alt" className="text-[18px]" />
+            Reset
+          </button>
+          <button
+            type="button"
+            aria-label="Tutup"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-variant text-on-surface-variant transition-transform active:scale-95"
+          >
+            <Icon name="close" className="text-[20px]" />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 px-margin-main py-3">
