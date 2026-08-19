@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { memo, useCallback, useMemo, useState } from "react";
 import { AllTransactionsSheet } from "@/components/AllTransactionsSheet";
 import { AppShell, TopBar } from "@/components/AppShell";
+import { FullScreenModal } from "@/components/FullScreenModal";
 import { EmptyState } from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { TransactionList } from "@/components/TransactionList";
@@ -37,9 +38,42 @@ const pockets = [
 ];
 
 const bills = [
-  { name: "Listrik", due: "Jatuh tempo 25 Agu", dueDay: 25, amount: 320000, paid: 120000 },
-  { name: "Internet", due: "Jatuh tempo 28 Agu", dueDay: 28, amount: 350000, paid: 350000 },
+  {
+    name: "Listrik",
+    icon: "bolt",
+    due: "Jatuh tempo 25 Agu",
+    dueDate: "25 Agu",
+    dueDay: 25,
+    amount: 320000,
+    paid: 120000,
+  },
+  {
+    name: "Internet",
+    icon: "wifi",
+    due: "Jatuh tempo 28 Agu",
+    dueDate: "28 Agu",
+    dueDay: 28,
+    amount: 350000,
+    paid: 350000,
+  },
 ];
+
+/** Deterministic mock mapping of a transaction to a wallet pocket. */
+function pocketOf(id: string) {
+  let sum = 0;
+  for (let i = 0; i < id.length; i += 1) sum += id.charCodeAt(i);
+  return pockets[sum % pockets.length]!.name;
+}
+
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const n = new Date();
+  return (
+    d.getDate() === n.getDate() &&
+    d.getMonth() === n.getMonth() &&
+    d.getFullYear() === n.getFullYear()
+  );
+}
 
 function daysUntil(dueDay: number) {
   const now = new Date();
@@ -56,12 +90,21 @@ function daysUntil(dueDay: number) {
 function Home() {
   const { user, transactions, balance, totalIncome, totalExpense, setAddTxOpen } = useApp();
   const [allOpen, setAllOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [activePocket, setActivePocket] = useState<string | null>(null);
   const pocketStrip = useDragScroll<HTMLDivElement>();
   const visible = useMemo(() => transactions.slice(0, RECENT_LIMIT), [transactions]);
   const hidden = Math.max(transactions.length - RECENT_LIMIT, 0);
   const openAll = useCallback(() => setAllOpen(true), []);
   const closeAll = useCallback(() => setAllOpen(false), []);
-  const openAddTx = useCallback(() => setAddTxOpen(true), [setAddTxOpen]);
+  const openPocket = useCallback((name: string) => setActivePocket(name), []);
+  const pocketItems = useMemo(
+    () =>
+      activePocket
+        ? transactions.filter((t) => isToday(t.date) && pocketOf(t.id) === activePocket)
+        : [],
+    [transactions, activePocket],
+  );
   const copyBalance = useCallback(async () => {
     const text = `Rp.${Math.abs(Math.round(balance)).toLocaleString("id-ID")}`;
     try {
@@ -91,7 +134,15 @@ function Home() {
           >
             <Icon name="content_copy" className="text-[16px]" />
           </button>
-          <Icon name="chevron_right" className="mb-1 text-[22px] text-primary" />
+          <button
+            type="button"
+            onClick={() => setBalanceOpen(true)}
+            aria-label="Lihat rincian saldo"
+            aria-haspopup="dialog"
+            className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-primary transition-transform active:scale-90"
+          >
+            <Icon name="chevron_right" className="text-[22px]" />
+          </button>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-2 sm:gap-3">
           <SummaryPill
@@ -124,7 +175,7 @@ function Home() {
               name={p.name}
               icon={p.icon}
               amount={balance * p.share}
-              onOpen={openAddTx}
+              onOpen={openPocket}
             />
           ))}
         </div>
@@ -139,30 +190,25 @@ function Home() {
             return (
               <li
                 key={b.name}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-outline-variant/20 py-3 last:border-0"
+                className="flex items-center gap-3 border-b border-outline-variant/20 py-3 last:border-0"
               >
-                <div className="flex min-w-0 flex-col gap-1">
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    urgent ? "bg-error/15 text-error" : "bg-primary-container/25 text-primary"
+                  }`}
+                >
+                  <Icon name={b.icon} className="text-[18px]" fill={1} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-body font-medium text-on-surface">{b.name}</span>
-                  <span className="text-meta text-on-surface-variant/80">{b.due}</span>
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        urgent ? "bg-error/15 text-error" : "bg-primary-container/25 text-primary"
-                      }`}
-                    >
-                      <Icon name="schedule" className="text-[13px]" fill={1} />
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-tight">
+                    <span className={urgent ? "font-semibold text-error" : "text-on-surface-variant"}>
                       {days === 0 ? "Jatuh tempo hari ini" : `Jatuh tempo dalam ${days} hari`}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-                        remaining > 0 ? "text-on-surface-variant" : "text-success"
-                      }`}
-                    >
-                      <Icon
-                        name={remaining > 0 ? "savings" : "check_circle"}
-                        className="text-[13px]"
-                        fill={1}
-                      />
+                    <span className="text-on-surface-variant/50">·</span>
+                    <span className="text-on-surface-variant/80">{`Tgl: ${b.dueDate}`}</span>
+                    <span className="text-on-surface-variant/50">·</span>
+                    <span className={remaining > 0 ? "text-on-surface-variant/80" : "text-success"}>
                       {remaining > 0 ? `Kurang ${formatIDR(remaining)}` : "Target tercapai"}
                     </span>
                   </span>
@@ -210,6 +256,52 @@ function Home() {
       </Section>
 
       <AllTransactionsSheet open={allOpen} onClose={closeAll} items={transactions} />
+
+      <FullScreenModal
+        open={balanceOpen}
+        onClose={() => setBalanceOpen(false)}
+        title="Rincian Saldo"
+        subtitle={`Total ${formatIDR(balance)}`}
+      >
+        <ul className="glass-card rounded-[18px] px-4">
+          {pockets.map((p) => (
+            <li
+              key={p.name}
+              className="flex items-center gap-3 border-b border-outline-variant/20 py-3 last:border-0"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-variant text-primary">
+                <Icon name={p.icon} className="text-[18px]" />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-body font-medium text-on-surface">{p.name}</span>
+                <span className="text-meta text-on-surface-variant/80">
+                  {`${Math.round(p.share * 100)}% dari total`}
+                </span>
+              </div>
+              <span className="shrink-0 text-body font-semibold text-on-surface">
+                {formatIDR(balance * p.share)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </FullScreenModal>
+
+      <FullScreenModal
+        open={activePocket !== null}
+        onClose={() => setActivePocket(null)}
+        title={`Transaksi Hari Ini - ${activePocket ?? ""}`}
+        subtitle={`${pocketItems.length} entri`}
+      >
+        {pocketItems.length ? (
+          <TransactionList items={pocketItems} />
+        ) : (
+          <EmptyState
+            icon="receipt"
+            title="Belum ada transaksi hari ini"
+            description="Transaksi kantong ini akan muncul di sini."
+          />
+        )}
+      </FullScreenModal>
     </AppShell>
   );
 }
@@ -227,7 +319,7 @@ const PocketCard = memo(function PocketCard({
   name: string;
   icon: string;
   amount: number;
-  onOpen: () => void;
+  onOpen: (name: string) => void;
 }) {
   return (
     <div
@@ -236,7 +328,8 @@ const PocketCard = memo(function PocketCard({
     >
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => onOpen(name)}
+        aria-haspopup="dialog"
         aria-label={`Kantong ${name}, saldo ${formatIDR(amount)}`}
         className="flex w-full flex-col items-center gap-1 transition-transform active:scale-[0.98]"
       >
