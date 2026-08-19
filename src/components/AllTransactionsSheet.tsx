@@ -5,6 +5,20 @@ import { TransactionList } from "./TransactionList";
 import { EmptyState } from "./EmptyState";
 import { useApp, type Transaction } from "@/lib/app-store";
 
+const WEEK_OPTIONS = [
+  { value: "all", label: "Semua Minggu" },
+  { value: "this", label: "Minggu Ini" },
+  { value: "last", label: "Minggu Lalu" },
+];
+
+/** Monday 00:00 of the week containing `d`. */
+function startOfWeek(d: Date) {
+  const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = (s.getDay() + 6) % 7;
+  s.setDate(s.getDate() - diff);
+  return s;
+}
+
 const MONTHS = [
   "Januari",
   "Februari",
@@ -35,10 +49,14 @@ export function AllTransactionsSheet({
   items: Transaction[];
 }) {
   // Filters live in the app store so selections persist across open/close.
-  const { txFilters, setTxFilters } = useApp();
-  const { month, type, category, keyword } = txFilters;
+  const { txFilters, setTxFilters, resetTxFilters } = useApp();
+  const { month, week, type, category, keyword } = txFilters;
   const hasActiveFilters =
-    month !== "all" || type !== "all" || category !== "all" || keyword.trim() !== "";
+    month !== "all" ||
+    week !== "all" ||
+    type !== "all" ||
+    category !== "all" ||
+    keyword.trim() !== "";
 
   useEffect(() => {
     if (!open) return;
@@ -60,6 +78,15 @@ export function AllTransactionsSheet({
         if (type !== "all" && t.type !== type) return false;
         if (category !== "all" && t.category !== category) return false;
         if (month !== "all" && String(new Date(t.date).getMonth()) !== month) return false;
+        if (week !== "all") {
+          const thisStart = startOfWeek(new Date());
+          const start = new Date(thisStart);
+          if (week === "last") start.setDate(start.getDate() - 7);
+          const end = new Date(start);
+          end.setDate(end.getDate() + 7);
+          const ts = new Date(t.date).getTime();
+          if (ts < start.getTime() || ts >= end.getTime()) return false;
+        }
         const q = keyword.trim().toLowerCase();
         if (q) {
           const haystack = `${t.category} ${t.note ?? ""}`.toLowerCase();
@@ -67,7 +94,7 @@ export function AllTransactionsSheet({
         }
         return true;
       }),
-    [items, month, type, category, keyword],
+    [items, month, week, type, category, keyword],
   );
 
   if (!open || typeof document === "undefined") return null;
@@ -89,9 +116,7 @@ export function AllTransactionsSheet({
             type="button"
             aria-label="Reset filter"
             disabled={!hasActiveFilters}
-            onClick={() =>
-              setTxFilters({ month: "all", type: "all", category: "all", keyword: "" })
-            }
+            onClick={resetTxFilters}
             className="flex h-10 items-center gap-1 rounded-full bg-surface-variant px-3 text-[12px] font-semibold text-on-surface-variant transition-transform active:scale-95 disabled:opacity-40"
           >
             <Icon name="restart_alt" className="text-[18px]" />
@@ -108,7 +133,7 @@ export function AllTransactionsSheet({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 px-margin-main py-3">
+      <div className="grid grid-cols-2 gap-2 px-margin-main py-3 sm:grid-cols-4">
         <FilterSelect
           label="Bulan"
           value={month}
@@ -117,6 +142,12 @@ export function AllTransactionsSheet({
             { value: "all", label: "Semua Bulan" },
             ...MONTHS.map((m, i) => ({ value: String(i), label: m })),
           ]}
+        />
+        <FilterSelect
+          label="Mingguan"
+          value={week}
+          onChange={(v) => setTxFilters({ week: v })}
+          options={WEEK_OPTIONS}
         />
         <FilterSelect
           label="Jenis"
