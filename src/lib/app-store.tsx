@@ -28,6 +28,7 @@ export type User = {
 
 export type TxFilters = {
   month: string;
+  week: string; // "all" | "this" | "last"
   type: "all" | "income" | "expense";
   category: string;
   keyword: string;
@@ -35,6 +36,7 @@ export type TxFilters = {
 
 export const defaultTxFilters: TxFilters = {
   month: "all",
+  week: "all",
   type: "all",
   category: "all",
   keyword: "",
@@ -95,8 +97,12 @@ type AppState = {
   transactions: Transaction[];
   settings: Settings;
   addTxOpen: boolean;
+  allTxOpen: boolean;
   txFilters: TxFilters;
   setTxFilters: (update: Partial<TxFilters>) => void;
+  resetTxFilters: () => void;
+  setAllTxOpen: (open: boolean) => void;
+  openCurrentMonth: () => void;
   login: (provider: "telegram" | "google", name?: string) => Promise<void>;
   logout: () => void;
   addTransaction: (input: Omit<Transaction, "id" | "date" | "pending">) => void;
